@@ -34,9 +34,23 @@ codex-workbuddy-connect/
 
 ---
 
-## 安装
+## 给别人安装使用
 
-### 前置条件
+### 给对方什么
+
+三种给法，任选其一（三种都在本机实测过）：
+
+| 给法 | 怎么给 | 对方怎么装 |
+|---|---|---|
+| **Git 仓库**（推荐） | 推到 GitHub（公开或私有）或公司内网 Git | `codex plugin marketplace add <owner>/<repo>` |
+| **共享目录 / U 盘** | 把整个仓库文件夹拷过去 | `codex plugin marketplace add <那个文件夹>` |
+| **压缩包** | 打包成 zip 发过去 | 解压后 `codex plugin marketplace add <解压出的文件夹>` |
+
+> 打包时**必须保留 `.gitattributes`**：它把 `*.cmd` 标记为 binary，防止 git 的换行规范化
+> 破坏那些 GBK+CRLF 的中文脚本。仓库已配好，打包 zip 时也照原样带上。
+> （实测：`git clone` 出来的 8 个 `.cmd` 与源文件 sha256 完全一致。）
+
+### 对方需要什么
 
 | 项 | 要求 | 说明 |
 |---|---|---|
@@ -45,51 +59,60 @@ codex-workbuddy-connect/
 | **Python** | 3.10+，含 `cryptography` | 用于 AES-256-GCM 解密 |
 | **Codex** | 0.153.x（已验证） | 0.16x 的 unified-exec helper 在本机会失败，别盲目升 |
 
-缺什么先跑 `doctor.cmd` —— 它会逐项告诉你。
+缺什么先跑 `doctor.cmd` —— 它会逐项告诉你，并给出补法。
 
-### 方式一：从本地/共享目录装（自己人之间传）
+### 对方要执行的命令
 
 ```cmd
-:: 1. 把市场加进来（路径换成你放这个仓库的位置）
-codex plugin marketplace add C:\path\to\codex-workbuddy-connect
+:: 1. 加市场（三种给法只差这一个参数）
+codex plugin marketplace add <owner>/<repo>        :: GitHub
+codex plugin marketplace add D:\share\codex-workbuddy-connect   :: 共享目录/U盘
+codex plugin marketplace add %USERPROFILE%\Downloads\codex-workbuddy-connect  :: zip 解压处
 
 :: 2. 装插件
 codex plugin add codex-workbuddy-connect@workbuddy
+
+:: 3. 体检（缺 Python / 没登录 WorkBuddy 等会在这里报出来）
+python "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect\<版本>\bin\setup.py" doctor
+
+:: 4. 安装（幂等，可反复跑）
+python "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect\<版本>\bin\setup.py" install
 ```
 
-### 方式二：从 Git 仓库装（放到 GitHub 后）
+第 3、4 步也可以让 Codex 自己跑 —— 会话里打 **`/workbuddy-setup`**（本插件带的命令），
+它就是替你执行体检 + 安装。
+
+### 另一种给法：个人市场（不用 marketplace add）
+
+把 `plugins/codex-workbuddy-connect/` 拷到 `~/plugins/`，并把
+`.agents/plugins/marketplace.json` 的条目合并进 `~/.agents/plugins/marketplace.json`，然后
+`codex plugin add codex-workbuddy-connect@personal`。
+个人市场是**隐式发现**的，不需要 `marketplace add`。
+
+### 装完怎么算成功
 
 ```cmd
-codex plugin marketplace add <owner>/codex-workbuddy-connect
+codex plugin list -m workbuddy      :: 应显示 installed, enabled
+codex --profile wb                  :: 能进会话
+```
+
+进会话后问一句「当前实际在用哪个模型」，或直接 `curl -s http://127.0.0.1:8787/wb/last-model`。
+（**别让模型读 config.toml 回答** —— 那是新建会话的默认值，不是当前会话在用的。）
+
+### 更新与重装
+
+Codex 按**版本号**物化插件，版本不变不会重读，所以改了内容要先升版本：
+
+```cmd
+python <插件根>\bin\bump-plugin.py <插件目录>
 codex plugin add codex-workbuddy-connect@workbuddy
 ```
 
-### 方式三：个人市场（默认路径）
-
-把 `plugins/codex-workbuddy-connect/` 拷到 `~/plugins/`，并把
-`.agents/plugins/marketplace.json` 的条目合并进 `~/.agents/plugins/marketplace.json`，
-然后：
-
-```cmd
-codex plugin add codex-workbuddy-connect@personal
-```
-
-个人市场是**隐式发现**的，不需要 `marketplace add`。
-
-### 装完之后：跑一次安装
-
-插件只是把文件铺好；还需要把 provider 写进 Codex 配置：
-
-```cmd
-:: 找到插件真实位置
-dir /b /s "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect"
-
-:: 体检 → 安装（幂等）
-python "<插件根>\bin\setup.py" doctor
-python "<插件根>\bin\setup.py" install
-```
-
-在 Codex 会话里也可以直接打 `/workbuddy-setup`（本插件带的命令），让 agent 替你跑。
+⚠ **重装前先确保没有进程"待在"插件目录里**：Codex 会先给旧缓存目录改名，有进程把它当工作目录
+（比如你自己 `cd` 进去过、或代理进程还在跑）就会报
+`failed to back up plugin cache entry: 拒绝访问 (os error 5)`。
+处理：停掉代理（`taskkill /F /IM python.exe` 里挑 wbproxy 那个）、退出在那个目录里的终端，
+必要时重启桌面端，然后重试。
 
 ---
 
