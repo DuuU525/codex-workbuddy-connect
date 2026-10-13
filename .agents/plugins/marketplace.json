@@ -1,0 +1,20 @@
+{
+  "name": "workbuddy",
+  "interface": {
+    "displayName": "WorkBuddy"
+  },
+  "plugins": [
+    {
+      "name": "codex-workbuddy-connect",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-workbuddy-connect"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

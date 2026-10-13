@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+dev/_work/
+*.bak-cwbc-*

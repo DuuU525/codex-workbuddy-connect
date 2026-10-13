@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.bak-cwbc-*
+dev/_work/
+.claude/
