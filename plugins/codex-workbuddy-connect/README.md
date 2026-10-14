@@ -120,15 +120,72 @@ Codex 默认不让 hook 自动执行。**未信任时 hook 状态是 `untrusted`
 >    hook Failed（哪怕脚本其实干活成功了）。诊断信息写日志文件
 >    （`%TEMP%\wb_hook.log`）。
 
-### 更新插件
+### 重装 / 更新：完整流程（实测可跑）
 
-Codex 按**版本号**物化插件（`plugins/cache/<市场>/<插件>/<版本>/`），版本不变不会重读。
-本地改完要重装时先打 cachebuster：
+Codex 按**版本号**把插件**复制**到 `plugins/cache/<市场>/<插件>/<版本>/`，
+所以「改了代码」或「要修状态」都必须重装一次，不能指望它读源目录。
+
+**第 0 步 · 先停掉会占用缓存目录的进程**（否则重装报
+`failed to back up plugin cache entry: 拒绝访问 (os error 5)`）—— 看护和代理都会占用：
 
 ```cmd
-python plugins\codex-workbuddy-connect\bin\bump-plugin.py plugins\codex-workbuddy-connect
+:: 只按精确 PID 结束，别用名字/命令行匹配（会误伤别的程序，甚至杀掉执行命令的 shell）
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'wbproxy|watch_plugin' } | ForEach-Object { $_.ProcessId }"
+:: 把上面列出的 PID 逐个结束：
+taskkill /F /PID <PID>
+```
+
+**第 1 步 · 确认市场已注册**（只需注册一次，重装不必重复）：
+
+```cmd
+codex plugin marketplace list
+:: 没有 workbuddy 时才需要：
+:: codex plugin marketplace add DuuU525/codex-workbuddy-connect
+```
+
+**第 2 步 · 装/重装插件**：
+
+```cmd
 codex plugin add codex-workbuddy-connect@workbuddy
 ```
+
+> 若**版本号没变**，Codex 会直接用已有缓存，改了的内容不生效。
+> 本地开发时先升版本：
+> ```cmd
+> python "<插件目录>\bin\bump-plugin.py" "<插件目录>"
+> ```
+> 从 GitHub 拉最新则是先 `git pull`（版本号已在仓库里升好）。
+
+**第 3 步 · 跑插件自带的安装器**（写 provider / profile / 模型目录 / 技能 / AGENTS 规则，
+并装看护自启）：
+
+```cmd
+:: 找到刚装出来的真实目录（含版本号）
+dir /b /s "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect"
+
+python "<插件目录>\bin\setup.py" doctor        :: 体检
+python "<插件目录>\bin\setup.py" install       :: 安装（幂等）
+```
+
+**第 4 步 · 核对**：
+
+```cmd
+codex plugin list -m workbuddy                   :: 应显示 installed, enabled + 版本号
+python "<插件目录>\bin\setup.py" status         :: 各项 True
+python "<插件目录>\bin\watch_plugin.py" --status   :: 插件激活 / 代理在跑 / 一致
+curl -s http://127.0.0.1:8787/health              :: ok:true
+```
+
+几条容易踩的：
+
+- **`codex plugin list` 显示 `not installed` 但目录还在** → 说明配置里的
+  `[plugins."codex-workbuddy-connect@workbuddy"]` 条目丢了，重跑第 2 步；不必重新 `marketplace add`。
+- **重装后看护"不工作"** → 看护是从**旧版本缓存目录**启动的（旧目录一删就悬空）。
+  重装后按第 3 步跑一次 `install`，它会把自启重新指向新版本目录。
+- **控制台窗口** → 若看到 `…\venv\Scripts\python.exe` 的窗口，是 1.5.2 之前版本的 bug，
+  升级到 1.5.3+ 即可（详见下文「后台进程不显示控制台窗口」）。
+- **hook 信任状态**在重装后**会保留**（存在 `config.toml` 的 `hooks.state.*`），
+  一般不需要重新信任；若 hook 内容变了则需重新 Trust。
 
 ---
 
