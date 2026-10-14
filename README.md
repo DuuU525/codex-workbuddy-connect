@@ -131,17 +131,31 @@ codex --profile wb                          新会话走 WorkBuddy
 
 ---
 
-## SessionStart hook：需要信任一次
+## SessionStart hook：必须信任一次，否则不会自动启动代理
 
-插件带的 hook 在会话开始时确保代理在跑。**Codex 默认不让 hook 自动执行**，首次在 TUI /
-桌面端开会话时会问：
+**代理不需要单独启动** —— 插件的 `SessionStart` hook 就是干这个的：会话开始时若代理没跑就拉起。
+但它**默认处于 `untrusted` 状态，永远不会执行**，症状是「代理没起来 → 桌面端静默连不上」。
 
-> Hooks need review — Hooks can run outside the sandbox after you trust them.
-> [Trust all and continue] [Continue without trusting (hooks won't run)]
+**桌面端**：设置 → **Hooks** → 找到本插件的 `SessionStart`（来源分组 **From Plugins**，
+未信任时显示 *Disabled until hook is trusted*）→ 点 **Trust all**。
 
-选 **Trust all and continue** 即可。不信任也能用，只是代理要自己拉（`codex-wb.cmd` 会拉）。
+**TUI**：新开会话时会弹 *Hooks need review … [Trust all and continue]*，选它。
 
-自动化场景可以跳过信任：`codex exec --dangerously-bypass-hook-trust ...`
+**命令行**：`codex exec --dangerously-bypass-hook-trust ...`（每个调用都绕过信任）。
+
+信任状态存在 `config.toml` 的 `hooks.state.<hook key>.trusted_hash`；**改动 hook 内容后需重新信任**。
+
+覆盖范围（`SessionStart` = “When a new session starts”）：
+
+| 场景 | 会自动拉起代理 |
+|---|---|
+| 新开 CLI 会话 / 桌面端新聊天 | ✅ |
+| 机器重启后第一次开会话 | ✅ |
+| 已开着的会话里代理中途挂了 | ❌ 不会自愈 |
+| 不用 Codex、只想代理常驻 | ❌ 需开机自启 |
+
+Codex **没有「插件被启用」事件**，hook 全是会话级的；要覆盖后两种场景只能靠 Codex 之外的一层
+（登录自启 / 看护任务）。
 
 ---
 

@@ -47,15 +47,49 @@ python "<插件根>\bin\setup.py" install
 | `commands/` | `/workbuddy-setup`、`/workbuddy-status` |
 | `hooks/hooks.json` | `SessionStart`：代理没跑就自动拉起 |
 
-### hook 需要信任一次
+### hook 需要信任一次（**必须做，否则不会自动启动代理**）
 
-Codex 默认不让 hook 自动执行。首次在 TUI / 桌面端开会话时会问：
+Codex 默认不让 hook 自动执行。**未信任时 hook 状态是 `untrusted`，它永远不会跑**，
+症状就是「代理没起来 → 桌面端静默连不上」。查当前状态：
+
+```cmd
+:: 起 app-server 问一句，或直接看下面「桌面端点法」的结果
+```
+
+**桌面端点法**：打开 **设置 → Hooks**。这个页面的存在与文案从 app 包里确认过：
+`settings.nav.hooks`、副标题 *"Manage lifecycle hooks from config and enabled plugins"*、
+来源分组里有 **From Plugins**，未信任的 hook 显示 **"Disabled until hook is trusted"**。
+找到本插件那条（`SessionStart`），点 **Trust all**。
+
+**TUI 点法**：新开会话时会弹
 
 > Hooks need review — Hooks can run outside the sandbox after you trust them.
 > [Trust all and continue] [Continue without trusting (hooks won't run)]
 
-选 **Trust all and continue**。不信任也能用，只是代理要自己拉（`codex-wb.cmd` 会拉）。
-自动化场景用 `codex exec --dangerously-bypass-hook-trust ...`。
+选 **Trust all and continue**。
+
+**自动化 / 不想点**：`codex exec --dangerously-bypass-hook-trust ...`（等同于每个调用都绕过信任）。
+
+信任状态存在 `config.toml` 的 `hooks.state.<hook key>.trusted_hash`（`<hook key>` 形如
+`codex-workbuddy-connect@workbuddy:hooks/hooks.json:session_start:0:0`）。
+**改过 hook 内容后会被判定为「Hook changed since last trusted」，需要重新信任。**
+如果显示「Another config layer overrides these hook settings」，说明有更高优先级的配置层
+（admin/项目配置）压着，要先处理那一层。
+
+### hook 能覆盖到什么范围（别指望它万能）
+
+`SessionStart` 的语义是 **“When a new session starts”** —— 所以：
+
+| 场景 | hook 会拉起代理吗 |
+|---|---|
+| 新开一个 CLI 会话 / 桌面端新聊天 | ✅ 会（代理没跑就拉，已跑则直接返回） |
+| 让已经开着的会话接着聊，但代理中途挂了 | ❌ 不会 —— 当前会话不会自愈 |
+| 机器重启后第一次开会话 | ✅ 会 |
+| 完全不用 Codex，只想代理常驻 | ❌ 得靠开机自启（见下） |
+
+要覆盖「代理中途挂掉」和「不用 Codex 也想常驻」，就得在 Codex 之外加一层
+（登录自启 / 看护任务）—— 插件自身做不到，因为 Codex **没有「插件被启用」这个事件**，
+hook 的事件全是会话级的。
 
 > **写 hook 命令的两条硬约束**（都是实测出来的，改之前先看）：
 > 1. 必须用 `%CLAUDE_PLUGIN_ROOT%` 拼**绝对**路径 —— hook 的 cwd 是会话目录而非插件根，
