@@ -11,7 +11,9 @@ rem      重定向到不存在的目录会静默吞掉整个脚本（踩过）。
 rem 本文件必须保持 GBK(cp936) + CRLF。
 setlocal
 call "%~dp0_findpy.cmd"
-if not defined PYEXE exit /b 0
-"%PYEXE%" "%~dp0..\bin\hook_session_start.py" >> "%TEMP%\wb_hook.log" 2>&1
+rem 用 PYWEXE（pythonw）：hook 由 codex 拉起，用 python.exe 会多弹一个控制台窗口。
+if not defined PYWEXE if defined PYEXE set "PYWEXE=%PYEXE%"
+if not defined PYWEXE exit /b 0
+"%PYWEXE%" "%~dp0..\bin\hook_session_start.py" >> "%TEMP%\wb_hook.log" 2>&1
 rem 无论成败都返回 0：hook 失败不该让用户的会话起不来
 exit /b 0
