@@ -159,7 +159,7 @@ codex-workbuddy-connect/
 │  ├─ codex-workbuddy-connect/   用法、免费档、排错、合规
 │  └─ query-current-model/       让 Codex 正确回答「当前模型」
 ├─ templates/                    参考片段（免安装时手工照抄用）
-└─ dev/                          诊断/测试脚本（不参与运行）
+└─ dev/                          [本地] 诊断/测试脚本（**不随仓库发布**）
 ```
 
 ---
@@ -464,8 +464,8 @@ Windows 上这类异常是 `ConnectionAbortedError`（WinError 10053），与 Li
 | `WB_CODEX_CONFIG` | `$CODEX_HOME/config.toml` | 要同步的配置文件 |
 | `WB_USAGE_LOG` | 空 | 记 usage/积分的 jsonl 路径 |
 | `CODEX_WB_CODEX` | npm 全局 codex | 指定启动器用哪个 codex |
-| `WB_MODEL` | `deepseek-v4.1-flash` | `dev/` 诊断脚本用哪个模型 |
-| `WB_ALLOW_PAID` | 未设 | 设为 `1` 才允许 `dev/` 跑计费模型 |
+| `WB_MODEL` | `deepseek-v4.1-flash` | 本地 `dev/` 脚本用哪个模型 |
+| `WB_ALLOW_PAID` | 未设 | 设为 `1` 才允许本地 `dev/` 跑计费模型 |
 
 （**别设** `PYTHONUTF8`/`PYTHONIOENCODING`：中文提示会与控制台代码页不匹配而乱码。
 脚本已自行按控制台代码页重配输出。）
@@ -501,9 +501,10 @@ uninstall.cmd
 
 ---
 
-## dev/ 里的诊断脚本
+## dev/ 里的诊断脚本（本地，不随仓库发布）
 
-不参与运行，排查时用。**默认全部走免费档**（`deepseek-v4.1-flash`，实测 0 扣分），
+这些脚本**不包含在公开发布的仓库里**（含逆向分析与指纹定位内容），仅你本地排查时用。
+**默认全部走免费档**（`deepseek-v4.1-flash`，实测 0 扣分），
 换成别的模型用 `WB_MODEL=hy3` 之类。
 
 真正花钱的费率测量脚本（`_measure_*.py`、`_codex_bench.py`、`_compare_codex.py`）
@@ -525,3 +526,5 @@ python dev\_measure_rate.py
 | `_measure_gpt6.py` | 各 GPT-6 档的积分率 ⟵ 计费 |
 | `_ttfb_matrix.py` | 首字节延迟矩阵（默认免费档；`WB_ALLOW_PAID=1` 才加测收费档） |
 | `README-legacy.md` | 整理前的原始 README（留档） |
+
+（以上均**不在**公开发布的仓库中。）

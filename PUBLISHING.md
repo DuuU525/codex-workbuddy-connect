@@ -1,5 +1,18 @@
 # 发布给别人安装
 
+> **当前状态：已发布到 GitHub 公开仓库** `https://github.com/DuuU525/codex-workbuddy-connect`
+> （**不含 `dev/`** —— 逆向分析与指纹定位脚本仅保留在本地，已加入 `.gitignore`）。
+>
+> 别人安装：
+> ```cmd
+> codex plugin marketplace add DuuU525/codex-workbuddy-connect
+> codex plugin add codex-workbuddy-connect@workbuddy
+> ```
+> 之后用插件自带安装器写配置（见 README）。
+>
+> 下面保留完整的发布手册，供换托管站或再发布时参考。
+
+
 本仓库是**标准 Codex marketplace 仓库**，发布 = 把它放到别人能访问的地方。
 下面是实测过的几种方式，以及各自的前提。
 

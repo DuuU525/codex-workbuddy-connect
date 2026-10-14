@@ -3,3 +3,6 @@ __pycache__/
 *.bak-cwbc-*
 dev/_work/
 .claude/
+
+# 本地诊断脚本（逆向分析/指纹定位），不随公开仓库发布
+plugins/codex-workbuddy-connect/dev/
