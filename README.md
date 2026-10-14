@@ -198,6 +198,13 @@ python "<插件根>\bin\setup.py" uninstall      :: 回退写进 config.toml 的
 
 ---
 
+## 发布给别人安装
+
+完整步骤（Gitee / GitHub / 共享目录 / 局域网 HTTP，含实测证据与网络限制）：
+见 [PUBLISHING.md](PUBLISHING.md)。
+
+---
+
 ## 详细文档
 
 插件内部文档（排错表、费率实测、踩过的坑、dev 诊断脚本）见
