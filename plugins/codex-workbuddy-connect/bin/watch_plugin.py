@@ -229,22 +229,32 @@ def _pid_alive(pid: int) -> bool:
 
 
 def acquire_lock() -> bool:
-    def free():
-        try:
-            old = int(LOCK.read_text(encoding="utf-8").strip() or 0)
-        except (OSError, ValueError):
-            return True
-        return not (old and _pid_alive(old))
+    """抢单实例锁。
 
-    if LOCK.exists():
-        if not free():
-            return False
-        LOCK.unlink(missing_ok=True)
-    try:
-        LOCK.write_text(str(os.getpid()), encoding="utf-8")
-    except OSError:
-        return True          # 写不了锁文件就别因此罢工
-    return True
+    用 O_CREAT|O_EXCL 原子创建 —— 上一版是「先看存在、再写」，两个进程同时启动时
+    都能通过检查，于是并存了两个看护（实测踩到）。锁里记 pid，只在原持有者已死时才清理。
+    """
+    for _ in range(2):
+        try:
+            fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(str(os.getpid()))
+            return True
+        except FileExistsError:
+            # 锁在：看持有者是否还活着；死了就当陈锁清掉再试一次
+            try:
+                old_pid = int(LOCK.read_text(encoding="utf-8").strip() or 0)
+            except (OSError, ValueError):
+                old_pid = 0
+            if old_pid and _pid_alive(old_pid) and old_pid != os.getpid():
+                return False
+            try:
+                LOCK.unlink(missing_ok=True)
+            except OSError:
+                return True          # 清不掉就别因此罢工
+        except OSError:
+            return True              # 锁文件写不了也不该阻断看护
+    return False
 
 
 # ── 对账 ─────────────────────────────────────────────────────
