@@ -1,6 +1,6 @@
 ---
 description: 把 WorkBuddy 接入 Codex（安装 / 修复 / 重装）
-argument-hint: "[--skip-doctor] [--no-skill] [--no-agents-rule]"
+argument-hint: "[--skip-doctor] [--no-watch] [--no-skill] [--no-agents-rule]"
 allowed-tools: [Bash, Read, Glob, Grep]
 ---
 
@@ -25,13 +25,24 @@ python "<插件根>\bin\setup.py" doctor
 python "<插件根>\bin\setup.py" install $ARGUMENTS
 ```
 
-4. 安装完了跑 `status` 确认：
+安装会一并做这些（幂等）：provider 段、profile、模型目录、技能、AGENTS 规则，
+以及**代理看护的登录自启**（想让代理按插件启停自动开关，就必须这一步）。
+
+4. 跑 status 与看护判定确认：
 
 ```cmd
 python "<插件根>\bin\setup.py" status
+python "<插件根>\bin\watch_plugin.py" --status
 ```
 
-5. 用一句话告诉用户怎么开始用：`codex --profile wb`，或者桌面端**新建会话**。
+5. 告诉用户两件事：
+
+   - 怎么开始用：`codex --profile wb`，或者桌面端**新建会话**（旧会话逐会话绑定 provider，不跟随）。
+   - **建议信任 hook**，否则「新会话自动拉起代理」不生效：
+     桌面端 **设置 → Hooks → From Plugins → 本插件 SessionStart → Trust all**
+     （或 TUI 新会话时选 *Trust all and continue*；自动化用
+     `codex exec --dangerously-bypass-hook-trust`）。
+     不信任也能用 —— 看护会兜底。
 
 ## 注意
 
@@ -40,3 +51,6 @@ python "<插件根>\bin\setup.py" status
 - 安装是幂等的：重复运行不会改动已就绪的内容，也不会累积空行。
 - 不要修改 `config.toml` 里本插件以外的段落。
 - 如果安装失败（退出码非 0），把 `!!` 那行原样贴给用户，不要自己猜。
+- 改了插件内容要先升版本再重装（Codex 按版本号缓存）：
+  `python "<插件根>\bin\bump-plugin.py" "<插件目录>"` 然后
+  `codex plugin add codex-workbuddy-connect@workbuddy`。

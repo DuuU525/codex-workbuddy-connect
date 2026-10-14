@@ -36,8 +36,9 @@ python "<插件根>\bin\setup.py" doctor
 python "<插件根>\bin\setup.py" install
 ```
 
-在 Codex 会话里也可以直接打 **`/workbuddy-setup`**（本插件带的命令），让 agent 替你跑第 4 步；
-**`/workbuddy-status`** 查看状态、实际在用模型与额度。
+第 4 步也可以让 Codex 自己跑：本插件带了 **`/workbuddy-setup`** 与 **`/workbuddy-status`** 命令。
+**不过在 Codex 0.153 上实测这两个不会被暴露**（`plugin/read` 不枚举 commands），
+所以以直接跑脚本为准 —— 命令当作对更新版本的便利入口。
 
 本插件提供三个面：
 

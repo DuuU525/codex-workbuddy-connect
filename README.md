@@ -79,8 +79,9 @@ python "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect\<�
 python "%USERPROFILE%\.codex\plugins\cache\workbuddy\codex-workbuddy-connect\<版本>\bin\setup.py" install
 ```
 
-第 3、4 步也可以让 Codex 自己跑 —— 会话里打 **`/workbuddy-setup`**（本插件带的命令），
-它就是替你执行体检 + 安装。
+第 3、4 步也可以让 Codex 自己跑 —— 本插件带 **`/workbuddy-setup`**（体检 + 安装）与
+**`/workbuddy-status`**。不过 Codex 0.153 上实测这两个命令不被暴露（`plugin/read` 不枚举
+`commands/`），以直接跑脚本为准。
 
 ### 另一种给法：个人市场（不用 marketplace add）
 
