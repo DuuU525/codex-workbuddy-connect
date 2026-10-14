@@ -76,20 +76,41 @@ Codex 默认不让 hook 自动执行。**未信任时 hook 状态是 `untrusted`
 如果显示「Another config layer overrides these hook settings」，说明有更高优先级的配置层
 （admin/项目配置）压着，要先处理那一层。
 
-### hook 能覆盖到什么范围（别指望它万能）
+### 两层保障：hook（会话级）+ 看护（常驻）
 
-`SessionStart` 的语义是 **“When a new session starts”** —— 所以：
+只靠 hook 有三个洞，因为 `SessionStart` 的语义是 **“When a new session starts”**：
 
-| 场景 | hook 会拉起代理吗 |
-|---|---|
-| 新开一个 CLI 会话 / 桌面端新聊天 | ✅ 会（代理没跑就拉，已跑则直接返回） |
-| 让已经开着的会话接着聊，但代理中途挂了 | ❌ 不会 —— 当前会话不会自愈 |
-| 机器重启后第一次开会话 | ✅ 会 |
-| 完全不用 Codex，只想代理常驻 | ❌ 得靠开机自启（见下） |
+| 场景 | 只有 hook | 装了看护后 |
+|---|---|---|
+| 新开 CLI 会话 / 桌面端新聊天 | ✅ | ✅ |
+| 机器重启后第一次开会话 | ✅ | ✅ |
+| **已开着的会话里代理中途挂了** | ❌ 不会自愈 | ✅ 几秒内自动恢复 |
+| **不用 Codex、只想代理常驻** | ❌ | ✅ |
+| **在 Codex 里停用插件** | ❌ 代理还在跑 | ✅ 自动停掉代理 |
 
-要覆盖「代理中途挂掉」和「不用 Codex 也想常驻」，就得在 Codex 之外加一层
-（登录自启 / 看护任务）—— 插件自身做不到，因为 Codex **没有「插件被启用」这个事件**，
-hook 的事件全是会话级的。
+看护（`bin/watch_plugin.py`）就是**按插件启用状态开关代理**：
+
+- **插件激活**（`config.toml` 里 `[plugins."codex-workbuddy-connect@workbuddy"] enabled = true`
+  且插件已安装）→ 代理保持在跑
+- **插件未激活**（`enabled = false`，或被卸载）→ 停掉代理
+
+`install.cmd` 会把它装成**登录自启**（写一个 VBS 到启动文件夹，免管理员权限）。
+停用插件就等于关代理，启用就等于开 —— 不需要单独管代理。
+
+看护命令：
+
+```cmd
+<插件>\scripts\watch-plugin.cmd --status            当前判定（激活？代理在跑？是否一致）
+<插件>\scripts\watch-plugin.cmd --once              只对账一次
+<插件>\scripts\watch-plugin.cmd                     常驻看护（Ctrl+C 退出）
+<插件>\scripts\watch-plugin.cmd --install-autostart 装登录自启
+<插件>\scripts\watch-plugin.cmd --remove-autostart  取消登录自启
+```
+
+日志：`%TEMP%\wbproxy_watch.log`。只记状态变化与错误，正常轮询不写日志。
+
+安全性：停代理前会核对进程命令行是否含本包的 `wbproxy.py`，
+**端口上若有别人的程序，绝不误杀**；看护自身有单实例锁。
 
 > **写 hook 命令的两条硬约束**（都是实测出来的，改之前先看）：
 > 1. 必须用 `%CLAUDE_PLUGIN_ROOT%` 拼**绝对**路径 —— hook 的 cwd 是会话目录而非插件根，
@@ -124,6 +145,7 @@ codex-workbuddy-connect/
 │  ├─ gen-catalog.py    生成 Codex 的模型切换列表（workbuddy-catalog.json）
 │  ├─ hook_session_start.py  SessionStart hook：确保代理在跑
 │  ├─ bump-plugin.py    更新插件时打 cachebuster 版本号
+│  ├─ watch_plugin.py   按插件启用状态看护代理（激活则起，未激活则停）
 │  └─ setup.py          安装/卸载器（写 provider、profile、目录、技能、指令规则）
 ├─ commands/            /workbuddy-setup、/workbuddy-status
 ├─ hooks/hooks.json     SessionStart（需在 Codex 里信任一次才自动执行）

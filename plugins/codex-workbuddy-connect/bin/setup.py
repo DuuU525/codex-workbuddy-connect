@@ -259,6 +259,31 @@ def step_agents_rule(home: Path, port: int) -> None:
     print(f"  已在 AGENTS.md 加入「现查当前模型」规则" + (f"（备份：{bak.name}）" if bak else ""))
 
 
+def step_watch(enable: bool) -> None:
+    """把「按插件状态看护代理」装上登录自启。
+
+    这是 hook 覆盖不到的部分：hook 只在会话开始时触发一次，管不了
+    「会话进行中代理挂掉」「重启后还没开会话」「不用 Codex」这三种情况。
+    """
+    watcher = HERE / "watch_plugin.py"
+    if not watcher.is_file():
+        print("  跳过看护（找不到 bin/watch_plugin.py）")
+        return
+    exe = proxy_python()
+    pyw = Path(exe).with_name("pythonw.exe")
+    runner = str(pyw) if pyw.is_file() else exe
+    action = "install-autostart" if enable else "remove-autostart"
+    r = subprocess.run([exe, str(watcher), f"--{action}"],
+                       capture_output=True, text=True, errors="replace")
+    out = (r.stdout or "").strip()
+    if r.returncode != 0:
+        print(f"  看护自启失败（退出码 {r.returncode}）：{(out or r.stderr or '').strip()[:200]}")
+        print(f"  可手动重试：{runner} \"{watcher}\" --{action}")
+        return
+    print(("  已安装" if enable else "  已移除") + "代理看护自启："
+          + ("插件激活时代理自动在跑，未激活则自动停掉" if enable else ""))
+
+
 def step_models_note(port: int) -> None:
     """列出可用模型，方便用户挑默认值。"""
     import json
@@ -322,6 +347,11 @@ def cmd_install(args) -> int:
 
     step_models_note(args.port)
 
+    if args.no_watch:
+        print("  跳过代理看护自启（--no-watch）")
+    else:
+        step_watch(True)
+
     print("\n完成。用法：")
     print(f"  {PKG_ROOT / 'scripts' / 'codex-wb.cmd'}                 # TUI（自动拉起代理）")
     print(f"  {PKG_ROOT / 'scripts' / 'codex-wb.cmd'} exec \"任务\"      # 非交互")
@@ -365,6 +395,8 @@ def cmd_uninstall(args) -> int:
                       "", cur, flags=re.S)
         write_text_keep(agents, text.rstrip("\r\n") + nl)
         print(f"  已移除 AGENTS.md 规则" + (f"（备份：{bak.name}）" if bak else ""))
+
+    step_watch(False)
 
     print("\n完成。代理进程若还在跑，可手动结束；包目录未删除。")
     return 0
@@ -412,6 +444,9 @@ def cmd_status(args) -> int:
     ag = home / "AGENTS.md"
     print(f"AGENTS.md 规则      : {ag.is_file() and MARK_BEGIN in read_text_keep(ag)}")
     print(f"代理 {args.port} 在跑 : {port_open(args.port)}")
+    startup = (Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows"
+               / "Start Menu" / "Programs" / "Startup" / "codex-workbuddy-connect-watch.vbs")
+    print(f"代理看护自启   : {startup.is_file()}")
     if port_open(args.port):
         import json
         import urllib.request
@@ -436,6 +471,7 @@ def main() -> int:
     p.add_argument("--no-agents-rule", action="store_true", help="不改动全局 AGENTS.md")
     p.add_argument("--skip-doctor", action="store_true", help="跳过环境体检")
     p.add_argument("--force", action="store_true", help="体检查出问题时也继续安装")
+    p.add_argument("--no-watch", action="store_true", help="不安装代理看护自启")
     p.set_defaults(func=cmd_install)
 
     p = sub.add_parser("uninstall", help="卸载（保留包目录与备份）")
