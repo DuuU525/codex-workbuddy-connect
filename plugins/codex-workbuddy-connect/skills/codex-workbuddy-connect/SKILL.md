@@ -69,6 +69,7 @@ codex plugin add codex-workbuddy-connect@workbuddy
 | `bin\gen-catalog.py` | 生成模型切换列表 `workbuddy-catalog.json` |
 | `bin\setup.py` | 安装/卸载器（provider、profile、目录、技能、AGENTS 规则、看护自启） |
 | `bin\hook_session_start.py` | SessionStart hook 的实现 |
+| `bin\wbspawn.py` | 无控制台窗口启动后台进程（venv 的 python.exe 是 uv 存根，转发不传 flags） |
 | `bin\watch_plugin.py` | **看护**：按插件启用状态开关代理 |
 | `bin\bump-plugin.py` | 更新插件时打 cachebuster 版本号 |
 | `scripts\codex-wb.cmd` | 启动 Codex（代理没跑会自动拉起） |

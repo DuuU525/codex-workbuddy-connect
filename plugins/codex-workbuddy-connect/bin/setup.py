@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import wbspawn  # noqa: E402  （无控制台启动）
 import wbdiscover  # noqa: E402
 from wbdiscover import console_encodings  # noqa: E402
 
@@ -107,15 +108,12 @@ def ensure_proxy(port: int, wait: int = 25) -> bool:
         print(f"  找不到 {script}")
         return False
     print(f"  启动代理：{script}")
-    flags = 0
-    if sys.platform == "win32":
-        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | 0x00000008  # DETACHED_PROCESS
     log = Path(os.environ.get("TEMP", ".")) / "wbproxy.log"
     try:
-        with open(log, "ab") as fh:
-            subprocess.Popen([proxy_python(), str(script), "--port", str(port)],
-                             stdout=fh, stderr=fh, stdin=subprocess.DEVNULL,
-                             creationflags=flags, close_fds=True)
+        # 必须用 wbspawn：venv 的 python.exe 是 uv 存根，转发时不传 creationflags，
+        # 真实解释器会自己弹出一个可见控制台（实测 MainWindowHandle != 0）。
+        wbspawn.spawn_detached([wbspawn.no_console_python(), str(script), "--port", str(port)],
+                               log=log)
     except OSError as e:
         print(f"  启动失败：{e}")
         return False

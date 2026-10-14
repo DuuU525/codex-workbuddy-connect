@@ -147,6 +147,7 @@ codex-workbuddy-connect/
 │  ├─ hook_session_start.py  SessionStart hook：确保代理在跑
 │  ├─ bump-plugin.py    更新插件时打 cachebuster 版本号
 │  ├─ watch_plugin.py   按插件启用状态看护代理（激活则起，未激活则停）
+│  ├─ wbspawn.py        以后台、无控制台窗口的方式启动 Python 进程
 │  └─ setup.py          安装/卸载器（写 provider、profile、目录、技能、指令规则）
 ├─ commands/            /workbuddy-setup、/workbuddy-status
 ├─ hooks/hooks.json     SessionStart（需在 Codex 里信任一次才自动执行）

@@ -18,6 +18,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 PROXY = PLUGIN_ROOT / "bin" / "wbproxy.py"
 sys.path.insert(0, str(PLUGIN_ROOT / "bin"))
+import wbspawn  # noqa: E402  （无控制台启动）
 
 DEFAULT_PORT = 8787
 
@@ -56,14 +57,11 @@ def main() -> int:
         return 0
 
     log = Path(tempfile.gettempdir()) / "wbproxy.log"
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | 0x00000008  # DETACHED_PROCESS
     try:
-        with open(log, "ab") as fh:
-            subprocess.Popen(
-                [sys.executable, str(PROXY), "--port", str(p)],
-                stdout=fh, stderr=fh, stdin=subprocess.DEVNULL,
-                creationflags=flags, cwd=str(PLUGIN_ROOT),
-            )
+        # 用 wbspawn 取「不会带控制台窗口」的解释器：venv 里的 python.exe 是 uv 存根，
+        # 转发时不传 creationflags，真实进程会自己弹一个可见控制台（实测踩过）。
+        wbspawn.spawn_detached([wbspawn.no_console_python(), str(PROXY), "--port", str(p)],
+                               log=log, cwd=str(PLUGIN_ROOT))
     except OSError as e:
         print(f"[workbuddy] 拉起代理失败：{e}", file=sys.stderr)
         return 0

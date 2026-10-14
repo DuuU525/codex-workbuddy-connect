@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import argparse
 import os
+
+import wbspawn
 import socket
 import subprocess
 import sys
@@ -175,12 +177,10 @@ def start_proxy(p: int | None = None) -> bool:
         log_err(f"启动失败：找不到 {PROXY}")
         return False
     logf = Path(tempfile.gettempdir()) / "wbproxy.log"
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | 0x00000008  # DETACHED_PROCESS
     try:
-        with open(logf, "ab") as fh:
-            subprocess.Popen([sys.executable, str(PROXY), "--port", str(p)],
-                             stdout=fh, stderr=fh, stdin=subprocess.DEVNULL,
-                             creationflags=flags, cwd=str(PLUGIN_ROOT))
+        # 见 wbspawn：venv 的 python.exe 是 uv 存根，转发不传 flags → 真实进程弹控制台。
+        wbspawn.spawn_detached([wbspawn.no_console_python(), str(PROXY), "--port", str(p)],
+                               log=logf, cwd=str(PLUGIN_ROOT))
     except OSError as e:
         log_err(f"启动代理失败：{e}")
         return False
@@ -316,8 +316,7 @@ def autostart_file() -> Path:
 
 def watcher_exe() -> str:
     """优先 pythonw.exe（无控制台窗口）。"""
-    pyw = Path(sys.executable).with_name("pythonw.exe")
-    return str(pyw) if pyw.is_file() else sys.executable
+    return wbspawn.no_console_python()
 
 
 def _vbs(path_exe: str, path_script: str) -> str:
@@ -362,9 +361,7 @@ def install_autostart() -> int:
     # 立刻起一个，省得等到下次登录
     if acquire_lock():
         try:
-            subprocess.Popen([sys.executable, script],
-                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) | 0x00000008,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            wbspawn.spawn_detached([wbspawn.no_console_python(), script])
             print("  看护已开始运行")
         except OSError as e:
             print(f"  !! 立刻启动看护失败（登录后仍会自启）：{e}")
