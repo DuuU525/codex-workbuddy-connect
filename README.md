@@ -13,6 +13,18 @@ Codex ──► 127.0.0.1:8787（本地代理）──► workbuddy.ai ──►
 
 ---
 
+## 安装（已发布）
+
+```cmd
+codex plugin marketplace add DuuU525/codex-workbuddy-connect
+codex plugin add codex-workbuddy-connect@workbuddy
+```
+
+再用插件自带安装器写配置（找到真实插件目录后执行 `bin\setup.py` doctor / install），见下文。
+公开仓库地址：https://github.com/DuuU525/codex-workbuddy-connect
+
+---
+
 ## 仓库结构
 
 这是 **marketplace 仓库**的形态（`.agents/plugins/marketplace.json` + `plugins/<名字>/`）：
